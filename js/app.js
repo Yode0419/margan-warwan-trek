@@ -1,6 +1,6 @@
 /* Margan & Warwan 替代行程 — 地圖與行程瀏覽 */
 (function () {
-  const BRAND = "#5b62e0", SAGE = "#7e9499";
+  const BRAND = "#4c5fd8", SAGE = "#7e9499";
   const HIKE_COLOR = "#d84b3f", DRIVE_COLOR = "#1a73e8";
 
   // ---- 地圖 ----
@@ -74,6 +74,9 @@
   });
 
   let line = null, chart = null, currentPts = null;
+  const elevCursor = L.circleMarker([0, 0], {
+    radius: 7, color: "#fff", weight: 2, fillColor: "#d84b3f", fillOpacity: 1
+  });
 
   async function selectDay(i) {
     const d = DAYS[i];
@@ -100,6 +103,7 @@
 
     if (line) { map.removeLayer(line); line = null; }
     currentPts = null;
+    if (map.hasLayer(elevCursor)) map.removeLayer(elevCursor);
 
     if (d.gpx) {
       const pts = await loadGpx(d.gpx);
@@ -144,6 +148,7 @@
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
         interaction: { mode: "nearest", axis: "x", intersect: false },
+        onHover: (evt, els) => showElevCursor(els, withEle),
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -159,6 +164,14 @@
         }
       }
     });
+  }
+
+  function showElevCursor(activeEls, withEle) {
+    if (!activeEls.length) return;
+    const p = withEle[activeEls[0].index];
+    if (!p) return;
+    elevCursor.setLatLng([p.lat, p.lon]);
+    if (!map.hasLayer(elevCursor)) elevCursor.addTo(map);
   }
 
   selectDay(4); // 預設顯示 Day 5 三湖環線
