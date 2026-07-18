@@ -2,12 +2,74 @@
 (function () {
   const BRAND = "#4c5fd8", SAGE = "#7e9499";
   const HIKE_COLOR = "#d84b3f", DRIVE_COLOR = "#1a73e8";
+  const COPY = {
+    zh: {
+      pageTitle: "Margan & Warwan Valley Trek｜替代行程路線",
+      languageLabel: "Switch to English",
+      infoLabel: "資料來源說明",
+      info: "徒步段為 OpenStreetMap 實測路徑組合，車程段以 OSRM 沿實際道路產生；海拔取自 90 m DEM，實際數值以現場為準。地圖底圖需網路連線。",
+      fullGpx: "完整 GPX",
+      daysLabel: "每日行程",
+      elevation: "高度變化",
+      fitRoute: "縮放至路線",
+      dayGpx: "下載本日 GPX",
+      layers: ["街道圖", "地形圖", "衛星影像"]
+    },
+    en: {
+      pageTitle: "Margan & Warwan Valley Trek | Alternative Route",
+      languageLabel: "切換至中文",
+      infoLabel: "About the data sources",
+      info: "Hiking sections combine recorded OpenStreetMap paths, while driving sections follow actual roads generated with OSRM. Elevation comes from a 90 m DEM; use on-site readings as the reference. An internet connection is required for map tiles.",
+      fullGpx: "Full GPX",
+      daysLabel: "Daily itinerary",
+      elevation: "Elevation profile",
+      fitRoute: "Fit route",
+      dayGpx: "Download day GPX",
+      layers: ["Street map", "Topographic map", "Satellite imagery"]
+    }
+  };
+  const DAY_EN = {
+    1: { short: "D1 Arrival", title: "Arrive in Srinagar", desc: "Airport pickup, check in to a deluxe houseboat, enjoy a sunset shikara ride, and have dinner.", stats: ["Elevation 1,585 m", "Stay: Houseboat"] },
+    2: { short: "D2 Drive", title: "Srinagar → Kokernag", desc: "Travel to Kokernag via Pampore's saffron fields and apple orchards. Visit the botanical garden and natural springs while preparing for higher elevations.", stats: ["Drive 3–4 hours", "Itinerary 85 km | GPS 84.6 km", "Elevation 2,020 m", "Stay: Local guesthouse"] },
+    3: { short: "D3 Drive", title: "Kokernag → Margan Valley", desc: "Climb through forest to the broad alpine meadows of Margan, set up camp, acclimatize, and optionally walk to a nearby ridge for sunset.", stats: ["Drive 2–3 hours", "Itinerary 38 km | GPS 52.8 km", "Camp around 3,670 m", "Stay: Margan tent camp"] },
+    4: { short: "D4 Hike", title: "Shilsar Twin Lakes Hike", desc: "Hike southeast from camp through wildflower-filled alpine meadows to the crystal-clear Shil Sar lakes, then return by the same route.", stats: ["Itinerary 10–12 km | GPS 9.0 km return", "5–6 hours", "Elevation 3,656–4,182 m", "Stay: Margan tent camp"] },
+    5: { short: "D5 Hike", title: "Churnag (Choharnag) Three Lakes Hike", desc: "Follow a loop to Choharnag Lakes One, Two, and Three through alpine meadows, rocky terrain, and glacial streams. The final approach to Lake Three is a short estimated segment; follow the terrain on site.", stats: ["Itinerary 14–16 km | GPS 9.5 km loop", "6–7 hours", "Elevation 3,670–3,995 m", "Stay: Churnag I tent camp"] },
+    6: { short: "D6 Hike", title: "Explore Margan Valley (Zambkash Sar)", desc: "Head north through the valley to hidden alpine meadows, shepherd settlements, and streams, then turn back at Zambkash Sar (Kumhar Nag). Strong hikers can continue to Nagputin Sar.", stats: ["Itinerary 8–10 km | GPS 13.1 km return", "From 4–5 hours", "Elevation 3,670–4,117 m", "Stay: Churnag II tent camp"] },
+    7: { short: "D7 Drive", title: "Margan Valley → Warwan Valley", desc: "Cross Margan Top and descend into scenic Warwan Valley (Inshan), where traditional villages and tranquil river-valley views await.", stats: ["Drive 2–3 hours", "Itinerary 16 km | GPS 25.1 km", "Inshan around 2,400 m", "Stay: Warwan tent camp"] },
+    8: { short: "D8 Drive", title: "Warwan Valley → Srinagar", desc: "Return to Srinagar along scenic mountain roads, check in to the hotel, and enjoy a free evening to celebrate the journey.", stats: ["Drive 7–8 hours", "Itinerary 180 km | GPS 162.8 km", "Stay: Hotel"] },
+    9: { short: "D9 Departure", title: "Journey Home", desc: "After breakfast, transfer to the airport for your flight home.", stats: ["Breakfast included"] }
+  };
+  const WAYPOINT_EN = [
+    "Srinagar (Dal Lake)", "Kokernag", "Margan Camp", "Upper Shil Sar", "Main Shil Sar",
+    "Middle Shil Sar", "Lower Shil Sar", "Choharnag Lake One", "Choharnag Lake Two",
+    "Choharnag Lake Three", "Choharnag Lake Four", "Zambkash Sar", "Nagputin Sar",
+    "Inshan (Warwan Valley)"
+  ];
+  let language = "zh";
+  let currentDayIndex = 0;
+  try { language = localStorage.getItem("trek-language") === "en" ? "en" : "zh"; } catch (e) {}
+
+  function localDay(day) {
+    return language === "en" ? DAY_EN[day.id] : day;
+  }
+
+  function setControlLabel(control, label) {
+    control.querySelector(".btn-label").textContent = label;
+    control.setAttribute("aria-label", label);
+  }
 
   function syncHeaderHeight() {
     const h = document.querySelector(".site-header").offsetHeight;
     document.documentElement.style.setProperty("--header-h", h + "px");
   }
   syncHeaderHeight();
+
+  const languageBtn = document.getElementById("language-btn");
+  languageBtn.addEventListener("click", () => {
+    language = language === "zh" ? "en" : "zh";
+    try { localStorage.setItem("trek-language", language); } catch (e) {}
+    applyLanguage();
+  });
 
   // ---- Header info tooltip ----
   const infoBtn = document.getElementById("info-btn");
@@ -47,6 +109,12 @@
   ).addTo(map);
   map.setView([33.75, 75.45], 9);
 
+  function updateLayerLabels() {
+    document.querySelectorAll(".leaflet-control-layers-base label > span > span").forEach((label, i) => {
+      if (COPY[language].layers[i]) label.textContent = " " + COPY[language].layers[i];
+    });
+  }
+
   function syncLayerControlPosition() {
     const nextPosition = window.innerWidth < 860 ? "topright" : "bottomleft";
     if (layerControlPosition === nextPosition) return;
@@ -55,13 +123,14 @@
   }
 
   // 航點
-  WAYPOINTS.forEach(w => {
-    const popup = `<b>${w.name}</b>`;
+  const waypointMarkers = [];
+  WAYPOINTS.forEach((w, i) => {
     // 較大的透明熱區，確保手機觸控好點中
-    L.circleMarker([w.lat, w.lon], {
+    const popupMarker = L.circleMarker([w.lat, w.lon], {
       radius: 16, color: "transparent", fillColor: "transparent",
       fillOpacity: 0, weight: 0
-    }).addTo(map).bindPopup(popup);
+    }).addTo(map).bindPopup("");
+    waypointMarkers.push({ marker: popupMarker, waypoint: w, index: i });
     L.circleMarker([w.lat, w.lon], {
       radius: w.star ? 7 : 5,
       color: w.star ? "#d84b3f" : BRAND,
@@ -107,7 +176,7 @@
   DAYS.forEach((d, i) => {
     const b = document.createElement("button");
     b.className = `tab ${d.type}`;
-    b.textContent = d.short;
+    b.textContent = localDay(d).short;
     b.addEventListener("click", (e) => { if (tabsDragged) { e.preventDefault(); return; } selectDay(i); });
     tabs.appendChild(b);
   });
@@ -166,16 +235,18 @@
   }
 
   async function selectDay(i) {
+    currentDayIndex = i;
     const d = DAYS[i];
+    const dayCopy = localDay(d);
     [...tabs.children].forEach((t, j) => t.classList.toggle("active", j === i));
     tabs.children[i].scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
 
-    document.getElementById("day-title").textContent = d.title;
-    document.getElementById("day-desc").textContent = d.desc;
+    document.getElementById("day-title").textContent = dayCopy.title;
+    document.getElementById("day-desc").textContent = dayCopy.desc;
 
     const ul = document.getElementById("day-stats");
     ul.innerHTML = "";
-    d.stats.forEach((s, k) => {
+    dayCopy.stats.forEach((s, k) => {
       const li = document.createElement("li");
       if (d.type !== "hike" && d.type !== "drive" || k >= 2) li.className = "alt";
       li.textContent = s;
@@ -224,7 +295,7 @@
     const total = pts[pts.length - 1].d;
     const eles = withEle.map(p => p.ele);
     document.getElementById("elev-meta").textContent =
-      `｜${Math.min(...eles).toFixed(0)}–${Math.max(...eles).toFixed(0)} m｜${total.toFixed(1)} km`;
+      `${language === "en" ? " | " : "｜"}${Math.min(...eles).toFixed(0)}–${Math.max(...eles).toFixed(0)} m${language === "en" ? " | " : "｜"}${total.toFixed(1)} km`;
 
     if (chart) { chart.destroy(); chart = null; }
     buildChart({ withEle, total });
@@ -402,6 +473,28 @@
     return { setState, isMobile, syncCollapsedHeight, syncHalfHeight, get state() { return state; } };
   })();
 
+  function applyLanguage(refreshDay) {
+    const copy = COPY[language];
+    document.documentElement.lang = language === "en" ? "en" : "zh-Hant";
+    document.title = copy.pageTitle;
+    languageBtn.setAttribute("aria-label", copy.languageLabel);
+    languageBtn.title = copy.languageLabel;
+    infoBtn.setAttribute("aria-label", copy.infoLabel);
+    document.getElementById("info-tooltip").textContent = copy.info;
+    document.getElementById("day-tabs").setAttribute("aria-label", copy.daysLabel);
+    document.querySelector("#elev-card h3").firstChild.textContent = copy.elevation + " ";
+    setControlLabel(document.querySelector(".btn-light"), copy.fullGpx);
+    setControlLabel(document.getElementById("fit-btn"), copy.fitRoute);
+    setControlLabel(document.getElementById("day-download"), copy.dayGpx);
+    [...tabs.children].forEach((tab, i) => { tab.textContent = localDay(DAYS[i]).short; });
+    waypointMarkers.forEach(({ marker, waypoint, index }) => {
+      marker.setPopupContent(`<b>${language === "en" ? WAYPOINT_EN[index] : waypoint.name}</b>`);
+    });
+    updateLayerLabels();
+    syncHeaderHeight();
+    if (refreshDay !== false) selectDay(currentDayIndex);
+  }
+
   window.addEventListener("resize", () => {
     syncHeaderHeight();
     syncLayerControlPosition();
@@ -410,6 +503,7 @@
     if (sheet.isMobile()) { sheet.syncCollapsedHeight(); sheet.syncHalfHeight(); }
   });
 
+  applyLanguage(false);
   selectDay(0); // 預設顯示 Day 1 抵達
 
   if (sheet.isMobile()) sheet.setState("half", { silent: true });
