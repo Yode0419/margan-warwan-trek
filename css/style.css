@@ -8,6 +8,7 @@
   --muted: #7a7d85;
   --radius: 14px;
   --header-h: 64px;
+  --sheet-minimized: 76px;
   --sheet-collapsed: 180px;
   --sheet-half: 55vh;
 }
@@ -167,12 +168,22 @@ h3 { margin: 0 0 4px; font-size: 15px; color: var(--brand-dark); }
     border-radius: 18px 18px 0 0;
     height: var(--sheet-collapsed);
     transition: height .28s cubic-bezier(.32,.72,0,1);
-    touch-action: auto;
+    touch-action: auto; overflow: hidden;
   }
   .panel.dragging { transition: none; }
+  .panel[data-state="minimized"] { height: var(--sheet-minimized); }
   .panel[data-state="half"] { height: var(--sheet-half); }
   .panel[data-state="full"] { height: calc(100% - 12px); }
   .panel[data-state="collapsed"] { height: var(--sheet-collapsed); }
+
+  /* minimized：只保留把手與日期切換列，底部留出白色安全區 */
+  .panel[data-state="minimized"] .card-head,
+  .panel[data-state="minimized"] .panel-scroll,
+  .panel[data-state="minimized"] .panel-actions { display: none; }
+  .panel[data-state="minimized"] .panel-fixed {
+    padding: 4px 14px calc(8px + env(safe-area-inset-bottom));
+  }
+  .panel[data-state="minimized"] #day-tabs { padding-bottom: 0; }
 
   /* collapsed：只留把手 + 日期列 + 標題 + 底部按鈕，捲動區（行程細節/海拔）整塊隱藏 */
   .panel[data-state="collapsed"] .panel-scroll { display: none; }

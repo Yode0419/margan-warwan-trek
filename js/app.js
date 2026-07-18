@@ -256,7 +256,7 @@
     const dl = document.getElementById("day-download");
     if (d.gpx) { dl.hidden = false; dl.href = d.gpx; } else { dl.hidden = true; }
 
-    if (sheet) sheet.syncCollapsedHeight();
+    if (sheet) { sheet.syncMinimizedHeight(); sheet.syncCollapsedHeight(); }
 
     if (line) { map.removeLayer(line); line = null; }
     currentPts = null;
@@ -363,14 +363,31 @@
     const handle = document.getElementById("panel-handle");
     const fixed = document.getElementById("panel-fixed");
     const actions = document.querySelector(".panel-actions");
-    const STATES = ["collapsed", "half", "full"];
+    const STATES = ["minimized", "collapsed", "half", "full"];
     let state = "collapsed";
 
     function isMobile() { return window.matchMedia("(max-width: 859px)").matches; }
 
+    function measureAs(stateName, measure) {
+      const previousState = panel.dataset.state;
+      if (previousState !== stateName) panel.dataset.state = stateName;
+      const value = measure();
+      if (previousState !== stateName) panel.dataset.state = previousState;
+      return value;
+    }
+
+    // minimized 高度 = 把手 + 日期列 + iPhone 底部安全區
+    function minimizedHeight() {
+      return measureAs("minimized", () => handle.offsetHeight + fixed.offsetHeight);
+    }
+
+    function syncMinimizedHeight() {
+      document.documentElement.style.setProperty("--sheet-minimized", minimizedHeight() + "px");
+    }
+
     // collapsed 高度 = 把手 + 日期列/標題 + 底部按鈕 的實際內容高度（避免寫死 px 造成裁切/留白）
     function collapsedHeight() {
-      return handle.offsetHeight + fixed.offsetHeight + actions.offsetHeight;
+      return measureAs("collapsed", () => handle.offsetHeight + fixed.offsetHeight + actions.offsetHeight);
     }
 
     function syncCollapsedHeight() {
@@ -383,14 +400,11 @@
       const carouselEl = document.getElementById("day-detail-carousel");
       const dotsEl = document.getElementById("carousel-dots");
 
-      // panel-scroll 在 collapsed 狀態下是 display:none，量測前需暫時強制顯示
-      const wasCollapsed = panel.dataset.state === "collapsed";
-      if (wasCollapsed) panel.classList.add("sheet-peek");
-      const contentH = collapsedHeight() + carouselEl.scrollHeight +
-        (dotsEl.hidden ? 0 : dotsEl.offsetHeight) + 12 /* panel-scroll 上下 padding 差額 */;
-      if (wasCollapsed) panel.classList.remove("sheet-peek");
-
-      return Math.min(contentH, shellH * 0.8);
+      return measureAs("half", () => {
+        const contentH = collapsedHeight() + carouselEl.scrollHeight +
+          (dotsEl.hidden ? 0 : dotsEl.offsetHeight) + 12 /* panel-scroll 上下 padding 差額 */;
+        return Math.min(contentH, shellH * 0.8);
+      });
     }
 
     function syncHalfHeight() {
@@ -399,6 +413,7 @@
 
     function heightFor(stateName) {
       const shellH = document.getElementById("map-shell").clientHeight;
+      if (stateName === "minimized") return minimizedHeight();
       if (stateName === "collapsed") return collapsedHeight();
       if (stateName === "full") return shellH - 12;
       return halfHeight();
@@ -417,7 +432,7 @@
 
     function setState(next, opts) {
       const silent = opts && opts.silent;
-      const wasCollapsed = state === "collapsed";
+      const wasContentHidden = state === "minimized" || state === "collapsed";
       state = next;
       panel.dataset.state = next;
       panel.classList.remove("dragging");
@@ -425,16 +440,17 @@
       if (silent) lastPanelHeight = heightFor(next);
       else panMapForHeightChange(heightFor(next));
       // 從 collapsed 展開時，圖表容器才第一次真正可見，需要 resize 校正寬度
-      if (wasCollapsed && next !== "collapsed" && chart) {
+      if (wasContentHidden && next !== "minimized" && next !== "collapsed" && chart) {
         setTimeout(() => chart.resize(), 300);
       }
     }
 
-    let dragStartY = 0, dragStartH = 0, dragging = false;
+    let dragStartY = 0, dragStartH = 0, dragging = false, dragMoved = false;
 
     handle.addEventListener("pointerdown", (e) => {
       if (!isMobile()) return;
       dragging = true;
+      dragMoved = false;
       handle.setPointerCapture(e.pointerId);
       panel.classList.add("dragging");
       dragStartY = e.clientY;
@@ -445,8 +461,10 @@
 
     handle.addEventListener("pointermove", (e) => {
       if (!dragging) return;
-      let next = dragStartH - (e.clientY - dragStartY);
-      next = Math.max(heightFor("collapsed"), Math.min(heightFor("full"), next));
+      const deltaY = e.clientY - dragStartY;
+      if (Math.abs(deltaY) > 4) dragMoved = true;
+      let next = dragStartH - deltaY;
+      next = Math.max(heightFor("minimized"), Math.min(heightFor("full"), next));
       panel.style.height = next + "px";
     });
 
@@ -458,19 +476,21 @@
       const candidates = STATES.map(s => ({ s, h: heightFor(s) }));
       candidates.sort((a, b) => Math.abs(a.h - currentH) - Math.abs(b.h - currentH));
       setState(candidates[0].s);
+      if (dragMoved) setTimeout(() => { dragMoved = false; }, 0);
     }
     handle.addEventListener("pointerup", endDrag);
     handle.addEventListener("pointercancel", endDrag);
 
     handle.addEventListener("click", () => {
-      if (dragging) return;
-      setState(state === "collapsed" ? "half" : "collapsed");
+      if (dragging || dragMoved) return;
+      setState(state === "minimized" || state === "collapsed" ? "half" : "minimized");
     });
 
+    syncMinimizedHeight();
     syncCollapsedHeight();
     syncHalfHeight();
     lastPanelHeight = heightFor("collapsed");
-    return { setState, isMobile, syncCollapsedHeight, syncHalfHeight, get state() { return state; } };
+    return { setState, isMobile, syncMinimizedHeight, syncCollapsedHeight, syncHalfHeight, get state() { return state; } };
   })();
 
   function applyLanguage(refreshDay) {
@@ -500,7 +520,7 @@
     syncLayerControlPosition();
     map.invalidateSize();
     if (chart) chart.resize();
-    if (sheet.isMobile()) { sheet.syncCollapsedHeight(); sheet.syncHalfHeight(); }
+    if (sheet.isMobile()) { sheet.syncMinimizedHeight(); sheet.syncCollapsedHeight(); sheet.syncHalfHeight(); }
   });
 
   applyLanguage(false);
