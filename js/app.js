@@ -156,7 +156,13 @@
       return;
     }
 
-    map.fitBounds(line.getBounds(), { padding: [padding, padding] });
+    // 手機版：避開底部面板，往上偏移半個面板高度
+    const panelEl = document.getElementById("panel");
+    const panelHeight = panelEl ? panelEl.getBoundingClientRect().height : 0;
+    map.fitBounds(line.getBounds(), {
+      paddingTopLeft: [padding, padding],
+      paddingBottomRight: [padding, panelHeight / 2 + padding]
+    });
   }
 
   async function selectDay(i) {
@@ -166,11 +172,6 @@
 
     document.getElementById("day-title").textContent = d.title;
     document.getElementById("day-desc").textContent = d.desc;
-
-    const summaryBadge = document.getElementById("panel-summary-badge");
-    summaryBadge.textContent = `DAY ${d.id}`;
-    summaryBadge.className = `day-badge ${d.type}`;
-    document.getElementById("panel-summary-title").textContent = d.title;
 
     const ul = document.getElementById("day-stats");
     ul.innerHTML = "";
@@ -183,6 +184,8 @@
 
     const dl = document.getElementById("day-download");
     if (d.gpx) { dl.hidden = false; dl.href = d.gpx; } else { dl.hidden = true; }
+
+    if (sheet) sheet.syncCollapsedHeight();
 
     if (line) { map.removeLayer(line); line = null; }
     currentPts = null;
@@ -200,7 +203,10 @@
       map.setView(d.center, d.zoom);
       document.getElementById("elev-card").hidden = true;
       if (chart) { chart.destroy(); chart = null; }
+      syncCarouselDots();
     }
+
+    if (sheet) sheet.syncHalfHeight();
   }
 
   document.getElementById("fit-btn").addEventListener("click", () => {
@@ -211,8 +217,9 @@
   function renderElevation(d, pts) {
     const card = document.getElementById("elev-card");
     const withEle = pts.filter(p => p.ele !== null);
-    if (withEle.length < 2) { card.hidden = true; return; }
+    if (withEle.length < 2) { card.hidden = true; syncCarouselDots(); return; }
     card.hidden = false;
+    syncCarouselDots();
 
     const total = pts[pts.length - 1].d;
     const eles = withEle.map(p => p.ele);
@@ -247,8 +254,8 @@
           }
         },
         scales: {
-          x: { type: "linear", title: { display: true, text: "距離 (km)" }, max: +total.toFixed(1) },
-          y: { title: { display: true, text: "海拔 (m)" } }
+          x: { type: "linear", max: +total.toFixed(1) },
+          y: {}
         }
       }
     });
@@ -262,32 +269,97 @@
     if (!map.hasLayer(elevCursor)) elevCursor.addTo(map);
   }
 
-  // ---- 手機 Bottom Sheet 拖曳 ----
+  // ---- 行程細節/海拔 輪播分頁指示 ----
+  const carousel = document.getElementById("day-detail-carousel");
+  const carouselDots = document.getElementById("carousel-dots");
+
+  function syncCarouselDots() {
+    const hasElev = !document.getElementById("elev-card").hidden;
+    carouselDots.hidden = !hasElev;
+    carousel.scrollTo({ left: 0 });
+    [...carouselDots.children].forEach((dot, i) => dot.classList.toggle("active", i === 0));
+  }
+
+  carousel.addEventListener("scroll", () => {
+    if (carouselDots.hidden) return;
+    const page = Math.round(carousel.scrollLeft / carousel.clientWidth);
+    [...carouselDots.children].forEach((dot, i) => dot.classList.toggle("active", i === page));
+  });
+
+  // ---- 手機 Bottom Sheet 拖曳（高度驅動，非 translateY） ----
   const sheet = (function initBottomSheet() {
     const panel = document.getElementById("panel");
     const handle = document.getElementById("panel-handle");
-    const summaryIcon = document.getElementById("panel-summary-icon");
+    const fixed = document.getElementById("panel-fixed");
+    const actions = document.querySelector(".panel-actions");
     const STATES = ["collapsed", "half", "full"];
     let state = "collapsed";
 
     function isMobile() { return window.matchMedia("(max-width: 859px)").matches; }
 
-    function pxFor(stateName) {
-      const shellH = document.getElementById("map-shell").clientHeight;
-      const collapsedPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sheet-collapsed"));
-      const halfPx = shellH * (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sheet-half")) / 100 || 0.55);
-      return { collapsed: shellH - collapsedPx, half: shellH - halfPx, full: 0 }[stateName];
+    // collapsed 高度 = 把手 + 日期列/標題 + 底部按鈕 的實際內容高度（避免寫死 px 造成裁切/留白）
+    function collapsedHeight() {
+      return handle.offsetHeight + fixed.offsetHeight + actions.offsetHeight;
     }
 
-    function setState(next) {
+    function syncCollapsedHeight() {
+      document.documentElement.style.setProperty("--sheet-collapsed", collapsedHeight() + "px");
+    }
+
+    // half 高度 = 貼合 carousel 實際內容高度（行程細節/海拔中較高者），上限螢幕 80%
+    function halfHeight() {
+      const shellH = document.getElementById("map-shell").clientHeight;
+      const carouselEl = document.getElementById("day-detail-carousel");
+      const dotsEl = document.getElementById("carousel-dots");
+
+      // panel-scroll 在 collapsed 狀態下是 display:none，量測前需暫時強制顯示
+      const wasCollapsed = panel.dataset.state === "collapsed";
+      if (wasCollapsed) panel.classList.add("sheet-peek");
+      const contentH = collapsedHeight() + carouselEl.scrollHeight +
+        (dotsEl.hidden ? 0 : dotsEl.offsetHeight) + 12 /* panel-scroll 上下 padding 差額 */;
+      if (wasCollapsed) panel.classList.remove("sheet-peek");
+
+      return Math.min(contentH, shellH * 0.8);
+    }
+
+    function syncHalfHeight() {
+      document.documentElement.style.setProperty("--sheet-half", halfHeight() + "px");
+    }
+
+    function heightFor(stateName) {
+      const shellH = document.getElementById("map-shell").clientHeight;
+      if (stateName === "collapsed") return collapsedHeight();
+      if (stateName === "full") return shellH - 12;
+      return halfHeight();
+    }
+
+    // 面板展開/收合時，地圖跟著平移，避免路線被遮擋
+    let lastPanelHeight = null;
+    function panMapForHeightChange(newHeight) {
+      if (!isMobile()) return;
+      if (lastPanelHeight === null) { lastPanelHeight = newHeight; return; }
+      const delta = newHeight - lastPanelHeight;
+      lastPanelHeight = newHeight;
+      if (Math.abs(delta) < 1) return;
+      map.panBy([0, delta / 2], { animate: true, duration: 0.28 });
+    }
+
+    function setState(next, opts) {
+      const silent = opts && opts.silent;
+      const wasCollapsed = state === "collapsed";
       state = next;
       panel.dataset.state = next;
       panel.classList.remove("dragging");
-      panel.style.transform = "";
-      summaryIcon.textContent = state === "collapsed" ? "expand_less" : "expand_more";
+      panel.style.height = "";
+      if (silent) lastPanelHeight = heightFor(next);
+      else panMapForHeightChange(heightFor(next));
+      // 從 collapsed 展開時，圖表容器才第一次真正可見，需要 resize 校正寬度
+      if (wasCollapsed && next !== "collapsed" && chart) {
+        setTimeout(() => chart.resize(), 300);
+      }
     }
 
-    let dragStartY = 0, dragStartPx = 0, dragging = false;
+    let dragStartY = 0, dragStartH = 0, dragging = false;
 
     handle.addEventListener("pointerdown", (e) => {
       if (!isMobile()) return;
@@ -295,22 +367,25 @@
       handle.setPointerCapture(e.pointerId);
       panel.classList.add("dragging");
       dragStartY = e.clientY;
-      dragStartPx = pxFor(state);
+      dragStartH = panel.getBoundingClientRect().height;
+      // 拖曳過程需要 panel-scroll 內容可見，暫時取消 collapsed 的隱藏規則
+      panel.classList.add("sheet-peek");
     });
 
     handle.addEventListener("pointermove", (e) => {
       if (!dragging) return;
-      let next = dragStartPx + (e.clientY - dragStartY);
-      next = Math.max(pxFor("full"), Math.min(pxFor("collapsed"), next));
-      panel.style.transform = `translateY(${next}px)`;
+      let next = dragStartH - (e.clientY - dragStartY);
+      next = Math.max(heightFor("collapsed"), Math.min(heightFor("full"), next));
+      panel.style.height = next + "px";
     });
 
     function endDrag(e) {
       if (!dragging) return;
       dragging = false;
-      const currentPx = e.clientY - dragStartY + dragStartPx;
-      const candidates = STATES.map(s => ({ s, px: pxFor(s) }));
-      candidates.sort((a, b) => Math.abs(a.px - currentPx) - Math.abs(b.px - currentPx));
+      panel.classList.remove("sheet-peek");
+      const currentH = dragStartH - (e.clientY - dragStartY);
+      const candidates = STATES.map(s => ({ s, h: heightFor(s) }));
+      candidates.sort((a, b) => Math.abs(a.h - currentH) - Math.abs(b.h - currentH));
       setState(candidates[0].s);
     }
     handle.addEventListener("pointerup", endDrag);
@@ -321,7 +396,10 @@
       setState(state === "collapsed" ? "half" : "collapsed");
     });
 
-    return { setState, isMobile };
+    syncCollapsedHeight();
+    syncHalfHeight();
+    lastPanelHeight = heightFor("collapsed");
+    return { setState, isMobile, syncCollapsedHeight, syncHalfHeight, get state() { return state; } };
   })();
 
   window.addEventListener("resize", () => {
@@ -329,9 +407,10 @@
     syncLayerControlPosition();
     map.invalidateSize();
     if (chart) chart.resize();
+    if (sheet.isMobile()) { sheet.syncCollapsedHeight(); sheet.syncHalfHeight(); }
   });
 
   selectDay(4); // 預設顯示 Day 5 三湖環線
 
-  if (sheet.isMobile()) sheet.setState("half");
+  if (sheet.isMobile()) sheet.setState("half", { silent: true });
 })();

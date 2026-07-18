@@ -37,32 +37,31 @@
     <div id="panel" class="panel" data-state="collapsed">
       <div id="panel-handle" class="panel-handle">
         <span class="handle-bar" aria-hidden="true"></span>
-        <div class="panel-summary" id="panel-summary">
-          <span class="day-badge" id="panel-summary-badge"></span>
-          <span id="panel-summary-title"></span>
-          <span class="material-symbols-outlined panel-summary-icon" id="panel-summary-icon" aria-hidden="true">expand_less</span>
+      </div>
+
+      <div class="panel-fixed" id="panel-fixed">
+        <nav id="day-tabs" aria-label="每日行程"></nav>
+        <div class="card-head">
+          <h2 id="day-title"></h2>
         </div>
       </div>
 
       <div class="panel-scroll" id="panel-scroll">
-        <nav id="day-tabs" aria-label="每日行程"></nav>
-
-        <section id="day-panel">
-          <div class="card-head">
-            <h2 id="day-title"></h2>
+        <div id="day-detail-carousel">
+          <div class="day-detail-slide">
+            <p id="day-desc"></p>
+            <ul class="stats" id="day-stats"></ul>
           </div>
-          <div id="day-detail-carousel">
-            <div class="day-detail-slide">
-              <p id="day-desc"></p>
-              <ul class="stats" id="day-stats"></ul>
-            </div>
 
-            <section id="elev-card" hidden>
-              <h3>高度變化 <span class="muted" id="elev-meta"></span></h3>
-              <div class="chart-box" id="elev-body"><canvas id="elev-chart"></canvas></div>
-            </section>
-          </div>
-        </section>
+          <section id="elev-card" hidden>
+            <h3>高度變化 <span class="muted" id="elev-meta"></span></h3>
+            <div class="chart-box" id="elev-body"><canvas id="elev-chart"></canvas></div>
+          </section>
+        </div>
+        <div id="carousel-dots" class="carousel-dots" hidden>
+          <span class="dot active"></span>
+          <span class="dot"></span>
+        </div>
       </div>
 
       <div class="panel-actions">

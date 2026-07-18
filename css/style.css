@@ -66,12 +66,15 @@ h1 { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.25; }
   box-shadow: 0 4px 20px rgba(0,0,0,.18);
 }
 .panel-handle { display: none; }
+
+/* 固定區：日期列 + 標題，collapsed/half/full 皆顯示 */
+.panel-fixed { flex: 0 0 auto; padding: 14px 14px 12px; }
+
+/* 捲動區：僅在展開（half/full）時顯示的行程細節/海拔輪播 */
 .panel-scroll {
-  flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
-  padding: 14px 14px 20px;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 2px 14px 16px;
 }
-#day-tabs, #day-panel, #elev-card { max-width: none; margin: 0 0 12px; padding: 0; }
-#elev-card:last-child { margin-bottom: 0; }
 
 .panel-actions {
   flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 10px;
@@ -80,8 +83,8 @@ h1 { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.25; }
 .panel-actions .btn, .panel-actions .btn-outline { flex: 1 1 0; justify-content: center; }
 
 /* Elevation */
-#elev-card { margin-top: 24px; }
-#elev-card h3 { margin: 16px 0 0; }
+#elev-card { margin-top: 20px; }
+#elev-card h3 { margin: 0 0 4px; }
 #elev-body { padding: 8px 0 4px; }
 
 /* Day tabs */
@@ -92,7 +95,7 @@ h1 { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.25; }
   cursor: grab; user-select: none;
   margin-inline: -14px;
   width: calc(100% + 28px);
-  padding: 0 14px 12px;
+  padding: 0 14px 18px;
   -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
   mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
 }
@@ -112,12 +115,7 @@ h1 { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.25; }
   padding: 18px 18px 16px; margin-bottom: 12px;
   box-shadow: 0 1px 6px rgba(0,0,0,.06);
 }
-.card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.day-badge {
-  background: var(--brand); color: #fff; font-weight: 700; font-size: 13px;
-  border-radius: 999px; padding: 4px 12px; letter-spacing: .05em;
-}
-.day-badge.drive, .day-badge.rest { background: var(--sage); }
+.card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 h2 { margin: 0; font-size: 18px; color: var(--brand-dark); }
 #day-desc { margin: 8px 0 12px; line-height: 1.7; font-size: 15px; }
 
@@ -145,7 +143,7 @@ h2 { margin: 0; font-size: 18px; color: var(--brand-dark); }
 
 h3 { margin: 0 0 4px; font-size: 15px; color: var(--brand-dark); }
 .muted { color: var(--muted); font-weight: 400; font-size: 13px; }
-.chart-box { position: relative; height: 180px; }
+.chart-box { position: relative; height: 180px; width: 100%; max-width: 100%; overflow: hidden; }
 
 /* Mobile：bottom sheet（地圖滿版背景 + 可拖曳底部抽屜） */
 @media (max-width: 859px) {
@@ -154,48 +152,50 @@ h3 { margin: 0 0 4px; font-size: 15px; color: var(--brand-dark); }
 
   .panel {
     left: 0; right: 0; bottom: 0;
-    height: calc(100% - 12px); max-height: calc(100% - 12px);
+    max-height: calc(100% - 12px);
     border-radius: 18px 18px 0 0;
-    transform: translateY(calc(100% - var(--sheet-collapsed)));
-    transition: transform .28s cubic-bezier(.32,.72,0,1);
+    height: var(--sheet-collapsed);
+    transition: height .28s cubic-bezier(.32,.72,0,1);
     touch-action: auto;
   }
   .panel.dragging { transition: none; }
-  .panel[data-state="half"] { transform: translateY(calc(100% - var(--sheet-half))); }
-  .panel[data-state="full"] { transform: translateY(0); }
-  .panel[data-state="collapsed"] { transform: translateY(calc(100% - var(--sheet-collapsed))); }
-  .panel[data-state="collapsed"] .panel-handle { margin-top: auto; }
-  .panel[data-state="collapsed"] .panel-summary { display: none; }
-  .panel[data-state="collapsed"] .panel-scroll {
-    flex: 0 0 auto; overflow: visible; padding: 0 14px;
-  }
-  .panel[data-state="collapsed"] #day-tabs { margin-bottom: 8px; padding-bottom: 8px; }
-  .panel[data-state="collapsed"] #day-panel { margin-bottom: 0; }
-  .panel[data-state="collapsed"] .card-head { margin-bottom: 0; }
-  .panel[data-state="collapsed"] #day-detail-carousel { display: none; }
+  .panel[data-state="half"] { height: var(--sheet-half); }
+  .panel[data-state="full"] { height: calc(100% - 12px); }
+  .panel[data-state="collapsed"] { height: var(--sheet-collapsed); }
+
+  /* collapsed：只留把手 + 日期列 + 標題 + 底部按鈕，捲動區（行程細節/海拔）整塊隱藏 */
+  .panel[data-state="collapsed"] .panel-scroll { display: none; }
+  /* 拖曳過程（sheet-peek）暫時恢復顯示，讓內容隨拖曳浮現，避免高度判定跳動 */
+  .panel[data-state="collapsed"].sheet-peek .panel-scroll { display: block; }
 
   .panel-handle {
-    display: block; flex: 0 0 auto; padding: 10px 16px 8px; cursor: grab; touch-action: none;
+    display: flex; justify-content: center; flex: 0 0 auto;
+    padding: 10px 16px 6px; cursor: grab; touch-action: none;
   }
   .handle-bar {
-    display: block; width: 40px; height: 4px; margin: 0 auto 10px;
+    display: block; width: 40px; height: 4px;
     border-radius: 999px; background: #d8d9e0;
   }
-  .panel-summary { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
-  .panel-summary-icon { margin-left: auto; color: var(--muted); transition: transform .2s; }
-  .panel[data-state="half"] .panel-summary-icon,
-  .panel[data-state="full"] .panel-summary-icon { transform: rotate(180deg); }
 
-  .panel-scroll { touch-action: auto; }
   #day-detail-carousel {
     display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch; scrollbar-width: none; touch-action: pan-x;
   }
+  #day-detail-carousel::-webkit-scrollbar { display: none; }
   .day-detail-slide,
   #elev-card {
-    flex: 0 0 100%; scroll-snap-align: start;
+    flex: 0 0 100%; scroll-snap-align: start; margin-top: 0;
   }
-  #elev-card { margin: 0; }
+
+  .carousel-dots {
+    display: flex; justify-content: center; gap: 6px; padding-top: 10px;
+  }
+  .carousel-dots[hidden] { display: none; }
+  .carousel-dots .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #d8dae1;
+    transition: background .15s, transform .15s;
+  }
+  .carousel-dots .dot.active { background: var(--brand); transform: scale(1.2); }
 }
 
 /* Desktop：右側浮動側欄 */
