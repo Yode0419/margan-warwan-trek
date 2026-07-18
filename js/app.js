@@ -1,6 +1,7 @@
 /* Margan & Warwan 替代行程 — 地圖與行程瀏覽 */
 (function () {
   const BRAND = "#5b62e0", SAGE = "#7e9499";
+  const HIKE_COLOR = "#d84b3f", DRIVE_COLOR = "#1a73e8";
 
   // ---- 地圖 ----
   const map = L.map("map", { scrollWheelZoom: true });
@@ -15,18 +16,25 @@
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     { maxZoom: 18, attribution: "Tiles &copy; Esri" }
   );
-  topo.addTo(map);
-  L.control.layers({ "地形圖": topo, "街道圖": osm, "衛星影像": sat }).addTo(map);
+  osm.addTo(map);
+  L.control.layers({ "街道圖": osm, "地形圖": topo, "衛星影像": sat }).addTo(map);
   map.setView([33.75, 75.45], 9);
 
   // 航點
   WAYPOINTS.forEach(w => {
+    const popup = `<b>${w.name}</b>`;
+    // 較大的透明熱區，確保手機觸控好點中
+    L.circleMarker([w.lat, w.lon], {
+      radius: 16, color: "transparent", fillColor: "transparent",
+      fillOpacity: 0, weight: 0
+    }).addTo(map).bindPopup(popup);
     L.circleMarker([w.lat, w.lon], {
       radius: w.star ? 7 : 5,
       color: w.star ? "#d84b3f" : BRAND,
       fillColor: w.star ? "#d84b3f" : "#8ec9e8",
-      fillOpacity: 0.9, weight: 2
-    }).addTo(map).bindPopup(`<b>${w.name}</b>`);
+      fillOpacity: 0.9, weight: 2,
+      interactive: false
+    }).addTo(map);
   });
 
   // ---- GPX 解析 ----
@@ -97,7 +105,7 @@
       const pts = await loadGpx(d.gpx);
       currentPts = pts;
       line = L.polyline(pts.map(p => [p.lat, p.lon]), {
-        color: d.type === "hike" ? BRAND : SAGE, weight: 4, opacity: 0.9
+        color: d.type === "hike" ? HIKE_COLOR : DRIVE_COLOR, weight: 4, opacity: 0.9
       }).addTo(map);
       map.fitBounds(line.getBounds(), { padding: [30, 30] });
       renderElevation(d, pts);
