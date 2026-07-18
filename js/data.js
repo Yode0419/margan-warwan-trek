@@ -18,28 +18,28 @@ const DAYS = [
     id: 3, type: "drive", short: "D3 車程",
     title: "Kokernag → Margan 山谷",
     desc: "穿越森林一路攀升至遼闊的 Margan 高山草原，紮營並適應高度，可至附近山脊賞日落。",
-    stats: ["車程 2–3 小時", "行程表 38 km｜GPS 52.8 km", "營地約 3670 m（DEM）", "住宿：Margan 帳篷營地"],
+    stats: ["車程 2–3 小時", "行程表 38 km｜GPS 52.8 km", "營地約 3670 m", "住宿：Margan 帳篷營地"],
     gpx: "gpx/alt_Day3_drive_Kokernag-MarganValley.gpx"
   },
   {
     id: 4, type: "hike", short: "D4 健行",
     title: "Shilsar 雙湖健行",
     desc: "由營地往東南方前往清澈見底的 Shil Sar 湖群，穿越野花盛開的高山草甸，原路折返。",
-    stats: ["行程表 10–12 km｜GPS 9.0 km 來回", "5–6 小時", "海拔 3656–4182 m（DEM）", "住宿：Margan 帳篷營地"],
+    stats: ["行程表 10–12 km｜GPS 9.0 km 來回", "5–6 小時", "海拔 3656–4182 m", "住宿：Margan 帳篷營地"],
     gpx: "gpx/alt_Day4_hike_ShilsarLakes.gpx"
   },
   {
     id: 5, type: "hike", short: "D5 健行",
     title: "Churnag（Choharnag）三湖健行",
     desc: "環線造訪 Choharnag 第一、二、三湖，穿越高山草原、岩石地形與冰川溪流。第三湖接近段為短補繪路段，現場請依地形行走。",
-    stats: ["行程表 14–16 km｜GPS 9.5 km 環線", "6–7 小時", "海拔 3670–3995 m（DEM）", "住宿：帳篷營地"],
+    stats: ["行程表 14–16 km｜GPS 9.5 km 環線", "6–7 小時", "海拔 3670–3995 m", "住宿：Churnag I 帳篷營地"],
     gpx: "gpx/alt_Day5_hike_ChoharnagLakes.gpx"
   },
   {
     id: 6, type: "hike", short: "D6 健行",
     title: "Margan 山谷探索（Zambkash Sar）",
     desc: "沿谷地北行探訪隱藏的高山草原、牧民聚落與溪流，至 Zambkash Sar（Kumhar Nag）湖畔後折返；體力允許可再延伸至 Nagputin Sar。",
-    stats: ["行程表 8–10 km｜GPS 13.1 km 來回", "4–5 小時起", "海拔 3670–4117 m（DEM）", "住宿：帳篷營地"],
+    stats: ["行程表 8–10 km｜GPS 13.1 km 來回", "4–5 小時起", "海拔 3670–4117 m", "住宿：Churnag II 帳篷營地"],
     gpx: "gpx/alt_Day6_hike_ZambkashSar.gpx"
   },
   {

@@ -7,6 +7,9 @@
   --text: #2b2d33;
   --muted: #7a7d85;
   --radius: 14px;
+  --header-h: 64px;
+  --sheet-collapsed: 180px;
+  --sheet-half: 55vh;
 }
 
 * { box-sizing: border-box; }
@@ -18,33 +21,82 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 20px; line-height: 1; vertical-align: middle; display: inline-block;
+}
+
 /* Header */
 .site-header { background: var(--brand); color: #fff; }
 .header-inner {
-  max-width: 1080px; margin: 0 auto; padding: 14px 16px;
+  width: 100%; margin: 0; padding: 14px 20px;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
 }
-.eyebrow {
-  margin: 0; font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
-  opacity: .85; font-weight: 600;
-}
-h1 { margin: 2px 0 0; font-size: 20px; font-weight: 700; }
+h1 { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.25; }
 
-/* Map */
-#map-wrap { max-width: 1080px; margin: 0 auto; padding: 12px 12px 0; }
-#map {
-  height: 46vh; min-height: 300px;
-  border-radius: var(--radius);
-  box-shadow: 0 2px 10px rgba(0,0,0,.08);
+.header-actions { display: flex; align-items: center; gap: 10px; position: relative; }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,.16); color: #fff; cursor: pointer;
 }
+.icon-btn:hover, .icon-btn[aria-expanded="true"] { background: rgba(255,255,255,.28); }
+.tooltip {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 1200;
+  width: 260px; background: var(--text); color: #fff;
+  font-size: 12px; line-height: 1.6; padding: 10px 12px;
+  border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.2);
+}
+
+/* Map shell：地圖滿版鋪底，面板浮動於其上 */
+#map-shell {
+  position: relative; width: 100%;
+  height: calc(100vh - var(--header-h));
+  height: calc(100dvh - var(--header-h));
+  overflow: hidden;
+}
+#map-wrap { position: absolute; inset: 0; z-index: 1; }
+#map { width: 100%; height: 100%; border-radius: 0; box-shadow: none; }
+
+/* Panel（桌機側欄 / 手機 bottom sheet 共用容器） */
+.panel {
+  position: absolute; z-index: 1100;
+  background: var(--card);
+  display: flex; flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0,0,0,.18);
+}
+.panel-handle { display: none; }
+.panel-scroll {
+  flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 14px 14px 20px;
+}
+#day-tabs, #day-panel, #elev-card { max-width: none; margin: 0 0 12px; padding: 0; }
+#elev-card:last-child { margin-bottom: 0; }
+
+.panel-actions {
+  flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 10px;
+  padding: 12px 14px; border-top: 1px solid #ecedf1;
+}
+.panel-actions .btn, .panel-actions .btn-outline { flex: 1 1 0; justify-content: center; }
+
+/* Elevation */
+#elev-card { margin-top: 24px; }
+#elev-card h3 { margin: 16px 0 0; }
+#elev-body { padding: 8px 0 4px; }
 
 /* Day tabs */
 #day-tabs {
-  max-width: 1080px; margin: 0 auto; padding: 12px;
   display: flex; gap: 8px; overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
+  cursor: grab; user-select: none;
+  margin-inline: -14px;
+  width: calc(100% + 28px);
+  padding: 0 14px 12px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
 }
+#day-tabs:active { cursor: grabbing; }
 .tab {
   flex: 0 0 auto; border: 1.5px solid var(--brand); background: #fff; color: var(--brand);
   border-radius: 999px; padding: 7px 14px; font-size: 14px; font-weight: 600;
@@ -55,7 +107,6 @@ h1 { margin: 2px 0 0; font-size: 20px; font-weight: 700; }
 .tab.drive.active, .tab.rest.active { background: var(--sage); border-color: var(--sage); color:#fff; }
 
 /* Panels */
-#day-panel { max-width: 1080px; margin: 0 auto; padding: 0 12px 32px; }
 .card {
   background: var(--card); border-radius: var(--radius);
   padding: 18px 18px 16px; margin-bottom: 12px;
@@ -77,27 +128,86 @@ h2 { margin: 0; font-size: 18px; color: var(--brand-dark); }
 }
 .stats li.alt { background: #eef3f4; color: #5c7378; }
 
-.card-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .btn {
-  display: inline-block; background: var(--brand); color: #fff; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--brand); color: #fff; text-decoration: none;
   border: none; border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 700;
   cursor: pointer;
 }
 .btn:active { background: var(--brand-dark); }
 .btn-outline { background: #fff; color: var(--brand); border: 1.5px solid var(--brand); }
-.btn-light { background: #fff; color: var(--brand); font-size: 13px; padding: 8px 12px; border-radius: 10px; text-decoration: none; font-weight: 700; flex: 0 0 auto; }
+.btn-light {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #fff; color: var(--brand); font-size: 13px; padding: 8px 12px;
+  border-radius: 10px; text-decoration: none; font-weight: 700; flex: 0 0 auto;
+}
 .btn[hidden] { display: none; }
 
 h3 { margin: 0 0 4px; font-size: 15px; color: var(--brand-dark); }
 .muted { color: var(--muted); font-weight: 400; font-size: 13px; }
 .chart-box { position: relative; height: 180px; }
-.footnote { color: var(--muted); font-size: 12px; line-height: 1.6; padding: 0 4px; }
 
-/* Desktop */
+/* Mobile：bottom sheet（地圖滿版背景 + 可拖曳底部抽屜） */
+@media (max-width: 859px) {
+  h1 { font-size: 15px; }
+  .header-inner { padding: 12px 16px; }
+
+  .panel {
+    left: 0; right: 0; bottom: 0;
+    height: calc(100% - 12px); max-height: calc(100% - 12px);
+    border-radius: 18px 18px 0 0;
+    transform: translateY(calc(100% - var(--sheet-collapsed)));
+    transition: transform .28s cubic-bezier(.32,.72,0,1);
+    touch-action: auto;
+  }
+  .panel.dragging { transition: none; }
+  .panel[data-state="half"] { transform: translateY(calc(100% - var(--sheet-half))); }
+  .panel[data-state="full"] { transform: translateY(0); }
+  .panel[data-state="collapsed"] { transform: translateY(calc(100% - var(--sheet-collapsed))); }
+  .panel[data-state="collapsed"] .panel-handle { margin-top: auto; }
+  .panel[data-state="collapsed"] .panel-summary { display: none; }
+  .panel[data-state="collapsed"] .panel-scroll {
+    flex: 0 0 auto; overflow: visible; padding: 0 14px;
+  }
+  .panel[data-state="collapsed"] #day-tabs { margin-bottom: 8px; padding-bottom: 8px; }
+  .panel[data-state="collapsed"] #day-panel { margin-bottom: 0; }
+  .panel[data-state="collapsed"] .card-head { margin-bottom: 0; }
+  .panel[data-state="collapsed"] #day-detail-carousel { display: none; }
+
+  .panel-handle {
+    display: block; flex: 0 0 auto; padding: 10px 16px 8px; cursor: grab; touch-action: none;
+  }
+  .handle-bar {
+    display: block; width: 40px; height: 4px; margin: 0 auto 10px;
+    border-radius: 999px; background: #d8d9e0;
+  }
+  .panel-summary { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+  .panel-summary-icon { margin-left: auto; color: var(--muted); transition: transform .2s; }
+  .panel[data-state="half"] .panel-summary-icon,
+  .panel[data-state="full"] .panel-summary-icon { transform: rotate(180deg); }
+
+  .panel-scroll { touch-action: auto; }
+  #day-detail-carousel {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none; touch-action: pan-x;
+  }
+  .day-detail-slide,
+  #elev-card {
+    flex: 0 0 100%; scroll-snap-align: start;
+  }
+  #elev-card { margin: 0; }
+}
+
+/* Desktop：右側浮動側欄 */
 @media (min-width: 860px) {
   h1 { font-size: 24px; }
-  #map { height: 54vh; }
-  #day-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
-  #day-panel .footnote { grid-column: 1 / -1; }
+
+  .panel {
+    top: 16px; right: 16px; bottom: 16px;
+    width: 380px; max-width: calc(100% - 32px);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .panel-handle { display: none; }
   .chart-box { height: 240px; }
 }

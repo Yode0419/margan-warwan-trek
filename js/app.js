@@ -3,6 +3,28 @@
   const BRAND = "#4c5fd8", SAGE = "#7e9499";
   const HIKE_COLOR = "#d84b3f", DRIVE_COLOR = "#1a73e8";
 
+  function syncHeaderHeight() {
+    const h = document.querySelector(".site-header").offsetHeight;
+    document.documentElement.style.setProperty("--header-h", h + "px");
+  }
+  syncHeaderHeight();
+
+  // ---- Header info tooltip ----
+  const infoBtn = document.getElementById("info-btn");
+  const infoTooltip = document.getElementById("info-tooltip");
+  infoBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = infoBtn.getAttribute("aria-expanded") === "true";
+    infoBtn.setAttribute("aria-expanded", String(!open));
+    infoTooltip.hidden = open;
+  });
+  document.addEventListener("click", (e) => {
+    if (!infoTooltip.hidden && !infoTooltip.contains(e.target) && e.target !== infoBtn) {
+      infoBtn.setAttribute("aria-expanded", "false");
+      infoTooltip.hidden = true;
+    }
+  });
+
   // ---- 地圖 ----
   const map = L.map("map", { scrollWheelZoom: true });
   const topo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
@@ -17,8 +39,20 @@
     { maxZoom: 18, attribution: "Tiles &copy; Esri" }
   );
   osm.addTo(map);
-  L.control.layers({ "街道圖": osm, "地形圖": topo, "衛星影像": sat }).addTo(map);
+  let layerControlPosition = window.innerWidth < 860 ? "topright" : "bottomleft";
+  const layerControl = L.control.layers(
+    { "街道圖": osm, "地形圖": topo, "衛星影像": sat },
+    null,
+    { position: layerControlPosition }
+  ).addTo(map);
   map.setView([33.75, 75.45], 9);
+
+  function syncLayerControlPosition() {
+    const nextPosition = window.innerWidth < 860 ? "topright" : "bottomleft";
+    if (layerControlPosition === nextPosition) return;
+    layerControlPosition = nextPosition;
+    layerControl.setPosition(nextPosition);
+  }
 
   // 航點
   WAYPOINTS.forEach(w => {
@@ -65,29 +99,78 @@
 
   // ---- UI ----
   const tabs = document.getElementById("day-tabs");
+
+  // 滑鼠拖曳橫向捲動（觸控本身已原生支援）
+  let tabsDragging = false, tabsDragged = false, tabsStartX = 0, tabsStartScroll = 0;
+  let tabsPointerId = null;
+
   DAYS.forEach((d, i) => {
     const b = document.createElement("button");
     b.className = `tab ${d.type}`;
     b.textContent = d.short;
-    b.addEventListener("click", () => selectDay(i));
+    b.addEventListener("click", (e) => { if (tabsDragged) { e.preventDefault(); return; } selectDay(i); });
     tabs.appendChild(b);
   });
+
+  tabs.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "touch") return;
+    tabsDragging = true; tabsDragged = false;
+    tabsPointerId = e.pointerId;
+    tabsStartX = e.clientX;
+    tabsStartScroll = tabs.scrollLeft;
+  });
+  tabs.addEventListener("pointermove", (e) => {
+    if (!tabsDragging) return;
+    const dx = e.clientX - tabsStartX;
+    if (!tabsDragged && Math.abs(dx) > 4) {
+      tabsDragged = true;
+      tabs.setPointerCapture(e.pointerId);
+    }
+    tabs.scrollLeft = tabsStartScroll - dx;
+  });
+  function endTabsDrag() {
+    tabsDragging = false;
+    if (tabsPointerId !== null && tabs.hasPointerCapture(tabsPointerId)) {
+      tabs.releasePointerCapture(tabsPointerId);
+    }
+    tabsPointerId = null;
+  }
+  tabs.addEventListener("pointerup", endTabsDrag);
+  tabs.addEventListener("pointercancel", endTabsDrag);
 
   let line = null, chart = null, currentPts = null;
   const elevCursor = L.circleMarker([0, 0], {
     radius: 7, color: "#fff", weight: 2, fillColor: "#d84b3f", fillOpacity: 1
   });
 
+  function fitRouteBounds() {
+    if (!line) return;
+    const padding = 30;
+
+    if (window.innerWidth >= 860) {
+      const panelWidth = tabs.parentElement.parentElement.getBoundingClientRect().width;
+      map.fitBounds(line.getBounds(), {
+        paddingTopLeft: [padding, padding],
+        paddingBottomRight: [panelWidth + padding, padding]
+      });
+      return;
+    }
+
+    map.fitBounds(line.getBounds(), { padding: [padding, padding] });
+  }
+
   async function selectDay(i) {
     const d = DAYS[i];
     [...tabs.children].forEach((t, j) => t.classList.toggle("active", j === i));
     tabs.children[i].scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
 
-    const badge = document.getElementById("day-badge");
-    badge.textContent = `DAY ${d.id}`;
-    badge.className = `day-badge ${d.type}`;
     document.getElementById("day-title").textContent = d.title;
     document.getElementById("day-desc").textContent = d.desc;
+
+    const summaryBadge = document.getElementById("panel-summary-badge");
+    summaryBadge.textContent = `DAY ${d.id}`;
+    summaryBadge.className = `day-badge ${d.type}`;
+    document.getElementById("panel-summary-title").textContent = d.title;
 
     const ul = document.getElementById("day-stats");
     ul.innerHTML = "";
@@ -111,19 +194,20 @@
       line = L.polyline(pts.map(p => [p.lat, p.lon]), {
         color: d.type === "hike" ? HIKE_COLOR : DRIVE_COLOR, weight: 4, opacity: 0.9
       }).addTo(map);
-      map.fitBounds(line.getBounds(), { padding: [30, 30] });
+      fitRouteBounds();
       renderElevation(d, pts);
     } else {
       map.setView(d.center, d.zoom);
       document.getElementById("elev-card").hidden = true;
+      if (chart) { chart.destroy(); chart = null; }
     }
   }
 
   document.getElementById("fit-btn").addEventListener("click", () => {
-    if (line) map.fitBounds(line.getBounds(), { padding: [30, 30] });
+    fitRouteBounds();
   });
 
-  // ---- 海拔剖面 ----
+  // ---- 海拔剖面（常駐展開） ----
   function renderElevation(d, pts) {
     const card = document.getElementById("elev-card");
     const withEle = pts.filter(p => p.ele !== null);
@@ -133,10 +217,14 @@
     const total = pts[pts.length - 1].d;
     const eles = withEle.map(p => p.ele);
     document.getElementById("elev-meta").textContent =
-      `｜${total.toFixed(1)} km｜${Math.min(...eles).toFixed(0)}–${Math.max(...eles).toFixed(0)} m`;
+      `｜${Math.min(...eles).toFixed(0)}–${Math.max(...eles).toFixed(0)} m｜${total.toFixed(1)} km`;
 
+    if (chart) { chart.destroy(); chart = null; }
+    buildChart({ withEle, total });
+  }
+
+  function buildChart({ withEle, total }) {
     const data = withEle.map(p => ({ x: +p.d.toFixed(3), y: p.ele }));
-    if (chart) chart.destroy();
     chart = new Chart(document.getElementById("elev-chart"), {
       type: "line",
       data: {
@@ -174,5 +262,76 @@
     if (!map.hasLayer(elevCursor)) elevCursor.addTo(map);
   }
 
+  // ---- 手機 Bottom Sheet 拖曳 ----
+  const sheet = (function initBottomSheet() {
+    const panel = document.getElementById("panel");
+    const handle = document.getElementById("panel-handle");
+    const summaryIcon = document.getElementById("panel-summary-icon");
+    const STATES = ["collapsed", "half", "full"];
+    let state = "collapsed";
+
+    function isMobile() { return window.matchMedia("(max-width: 859px)").matches; }
+
+    function pxFor(stateName) {
+      const shellH = document.getElementById("map-shell").clientHeight;
+      const collapsedPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sheet-collapsed"));
+      const halfPx = shellH * (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sheet-half")) / 100 || 0.55);
+      return { collapsed: shellH - collapsedPx, half: shellH - halfPx, full: 0 }[stateName];
+    }
+
+    function setState(next) {
+      state = next;
+      panel.dataset.state = next;
+      panel.classList.remove("dragging");
+      panel.style.transform = "";
+      summaryIcon.textContent = state === "collapsed" ? "expand_less" : "expand_more";
+    }
+
+    let dragStartY = 0, dragStartPx = 0, dragging = false;
+
+    handle.addEventListener("pointerdown", (e) => {
+      if (!isMobile()) return;
+      dragging = true;
+      handle.setPointerCapture(e.pointerId);
+      panel.classList.add("dragging");
+      dragStartY = e.clientY;
+      dragStartPx = pxFor(state);
+    });
+
+    handle.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      let next = dragStartPx + (e.clientY - dragStartY);
+      next = Math.max(pxFor("full"), Math.min(pxFor("collapsed"), next));
+      panel.style.transform = `translateY(${next}px)`;
+    });
+
+    function endDrag(e) {
+      if (!dragging) return;
+      dragging = false;
+      const currentPx = e.clientY - dragStartY + dragStartPx;
+      const candidates = STATES.map(s => ({ s, px: pxFor(s) }));
+      candidates.sort((a, b) => Math.abs(a.px - currentPx) - Math.abs(b.px - currentPx));
+      setState(candidates[0].s);
+    }
+    handle.addEventListener("pointerup", endDrag);
+    handle.addEventListener("pointercancel", endDrag);
+
+    handle.addEventListener("click", () => {
+      if (dragging) return;
+      setState(state === "collapsed" ? "half" : "collapsed");
+    });
+
+    return { setState, isMobile };
+  })();
+
+  window.addEventListener("resize", () => {
+    syncHeaderHeight();
+    syncLayerControlPosition();
+    map.invalidateSize();
+    if (chart) chart.resize();
+  });
+
   selectDay(4); // 預設顯示 Day 5 三湖環線
+
+  if (sheet.isMobile()) sheet.setState("half");
 })();

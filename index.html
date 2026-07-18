@@ -6,48 +6,75 @@
 <title>Margan &amp; Warwan Valley Trek｜替代行程路線</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%235b62e0'/%3E%3Cpath d='M15 75 40 35 55 60 65 45 85 75Z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <header class="site-header">
   <div class="header-inner">
     <div>
-      <p class="eyebrow">Margan Valley &amp; Warwan Valley Trek</p>
-      <h1>喀什米爾替代行程</h1>
+      <h1>Margan Valley &amp; Warwan Valley Trek</h1>
     </div>
-    <a class="btn btn-light" href="gpx/alt_FULL_Margan_Warwan_Trek.gpx" download>⬇ 完整 GPX</a>
+    <div class="header-actions">
+      <button class="icon-btn" id="info-btn" type="button" aria-label="資料來源說明" aria-expanded="false">
+        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+      </button>
+      <div class="tooltip" id="info-tooltip" role="tooltip" hidden>
+        徒步段為 OpenStreetMap 實測路徑組合，車程段以 OSRM 沿實際道路產生；
+        海拔取自 90 m DEM，實際數值以現場為準。地圖底圖需網路連線。
+      </div>
+      <a class="btn btn-light" href="gpx/alt_FULL_Margan_Warwan_Trek.gpx" download>
+        <span class="material-symbols-outlined" aria-hidden="true">download</span>完整 GPX
+      </a>
+    </div>
   </div>
 </header>
 
 <main>
-  <section id="map-wrap">
-    <div id="map"></div>
-  </section>
+  <div id="map-shell">
+    <div id="map-wrap"><div id="map"></div></div>
 
-  <nav id="day-tabs" aria-label="每日行程"></nav>
-
-  <section id="day-panel">
-    <div class="card" id="day-card">
-      <div class="card-head">
-        <span class="day-badge" id="day-badge"></span>
-        <h2 id="day-title"></h2>
+    <div id="panel" class="panel" data-state="collapsed">
+      <div id="panel-handle" class="panel-handle">
+        <span class="handle-bar" aria-hidden="true"></span>
+        <div class="panel-summary" id="panel-summary">
+          <span class="day-badge" id="panel-summary-badge"></span>
+          <span id="panel-summary-title"></span>
+          <span class="material-symbols-outlined panel-summary-icon" id="panel-summary-icon" aria-hidden="true">expand_less</span>
+        </div>
       </div>
-      <p id="day-desc"></p>
-      <ul class="stats" id="day-stats"></ul>
-      <div class="card-actions">
-        <a class="btn" id="day-download" href="#" download>⬇ 下載本日 GPX</a>
-        <button class="btn btn-outline" id="fit-btn" type="button">⤢ 縮放至路線</button>
+
+      <div class="panel-scroll" id="panel-scroll">
+        <nav id="day-tabs" aria-label="每日行程"></nav>
+
+        <section id="day-panel">
+          <div class="card-head">
+            <h2 id="day-title"></h2>
+          </div>
+          <div id="day-detail-carousel">
+            <div class="day-detail-slide">
+              <p id="day-desc"></p>
+              <ul class="stats" id="day-stats"></ul>
+            </div>
+
+            <section id="elev-card" hidden>
+              <h3>高度變化 <span class="muted" id="elev-meta"></span></h3>
+              <div class="chart-box" id="elev-body"><canvas id="elev-chart"></canvas></div>
+            </section>
+          </div>
+        </section>
+      </div>
+
+      <div class="panel-actions">
+        <button class="btn btn-outline" id="fit-btn" type="button">
+          <span class="material-symbols-outlined" aria-hidden="true">zoom_in_map</span>縮放至路線
+        </button>
+        <a class="btn" id="day-download" href="#" download>
+          <span class="material-symbols-outlined" aria-hidden="true">download</span>下載本日 GPX
+        </a>
       </div>
     </div>
-
-    <div class="card" id="elev-card" hidden>
-      <h3>海拔 <span class="muted" id="elev-meta"></span></h3>
-      <div class="chart-box"><canvas id="elev-chart"></canvas></div>
-    </div>
-
-    <p class="footnote">徒步段為 OpenStreetMap 實測路徑組合，車程段以 OSRM 沿實際道路產生；
-    海拔取自 90 m DEM，實際數值以現場為準。地圖底圖需網路連線。</p>
-  </section>
+  </div>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
