@@ -410,7 +410,7 @@
     if (sheet.isMobile()) { sheet.syncCollapsedHeight(); sheet.syncHalfHeight(); }
   });
 
-  selectDay(4); // 預設顯示 Day 5 三湖環線
+  selectDay(0); // 預設顯示 Day 1 抵達
 
   if (sheet.isMobile()) sheet.setState("half", { silent: true });
 })();
