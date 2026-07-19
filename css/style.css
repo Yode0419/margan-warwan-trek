@@ -194,14 +194,16 @@ h3 { margin: 0 0 4px; font-size: 15px; color: var(--brand-dark); }
   .panel[data-state="minimized"] .panel-scroll,
   .panel[data-state="minimized"] .panel-actions { display: none; }
   .panel[data-state="minimized"] .panel-fixed {
-    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
   }
+  .panel[data-state="minimized"] #day-tabs { padding-bottom: 0; }
 
   /* 從 minimized 往上拖時，讓原本隱藏的內容隨面板高度逐步露出。 */
   .panel[data-state="minimized"].sheet-peek .card-head,
   .panel[data-state="minimized"].sheet-peek .panel-actions { display: flex; }
   .panel[data-state="minimized"].sheet-peek .panel-scroll { display: block; }
   .panel[data-state="minimized"].sheet-peek .panel-fixed { padding-bottom: 12px; }
+  .panel[data-state="minimized"].sheet-peek #day-tabs { padding-bottom: 18px; }
 
   /* collapsed：只留把手 + 日期列 + 標題 + 底部按鈕，捲動區（行程細節/海拔）整塊隱藏 */
   .panel[data-state="collapsed"] .panel-scroll { display: none; }
