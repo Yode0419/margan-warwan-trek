@@ -449,6 +449,7 @@
     }
 
     let dragStartY = 0, dragStartH = 0, dragMinH = 0, dragMaxH = 0;
+    let dragSnapHeights = [];
     let dragging = false, dragMoved = false;
 
     handle.addEventListener("pointerdown", (e) => {
@@ -460,9 +461,12 @@
       panel.classList.add("dragging");
       dragStartY = e.clientY;
       dragStartH = panel.getBoundingClientRect().height;
+      // Cache every snap point before the drag starts so releasing does not
+      // temporarily reflow the sheet while measuring another state.
+      dragSnapHeights = STATES.map(s => ({ s, h: heightFor(s) }));
       // 拖曳開始後固定邊界，避免 Safari 工具列造成 dvh 變動時中途跳動。
-      dragMinH = heightFor("minimized");
-      dragMaxH = heightFor("full");
+      dragMinH = dragSnapHeights.find(({ s }) => s === "minimized").h;
+      dragMaxH = dragSnapHeights.find(({ s }) => s === "full").h;
       // 拖曳過程需要 panel-scroll 內容可見，暫時取消 collapsed 的隱藏規則
       panel.classList.add("sheet-peek");
     });
@@ -480,10 +484,10 @@
       if (!dragging) return;
       const currentH = panel.getBoundingClientRect().height;
       dragging = false;
-      panel.classList.remove("sheet-peek");
-      document.body.classList.remove("sheet-drag-locked");
-      const candidates = STATES.map(s => ({ s, h: heightFor(s) }));
+      const candidates = dragSnapHeights.slice();
       candidates.sort((a, b) => Math.abs(a.h - currentH) - Math.abs(b.h - currentH));
+      // setState changes data-state before removing sheet-peek, keeping the
+      // action bar anchored while collapsed snaps open to half.
       setState(candidates[0].s);
       if (dragMoved) setTimeout(() => { dragMoved = false; }, 0);
     }

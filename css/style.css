@@ -215,7 +215,13 @@ h3 { margin: 0 0 4px; font-size: 15px; color: var(--brand-dark); }
     padding: 10px 16px 6px; cursor: grab; touch-action: none;
   }
 
-  .panel-scroll { overscroll-behavior: contain; }
+  /* Only the content viewport grows or shrinks as the sheet is dragged. */
+  .panel-scroll {
+    flex: 1 1 0;
+    min-height: 0;
+    overscroll-behavior: contain;
+  }
+  .panel.dragging .panel-scroll { overflow-y: hidden; }
   .handle-bar {
     display: block; width: 40px; height: 4px;
     border-radius: 999px; background: #d8d9e0;
