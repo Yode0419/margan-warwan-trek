@@ -232,13 +232,16 @@ h3 { margin: 0 0 4px; font-size: 15px; color: var(--brand-dark); }
   @supports (-webkit-touch-callout: none) {
     :root { --ios-toolbar-clearance: 0px; }
 
+    body { background-color: var(--card); }
+
     .toolbar-tint-helper {
       display: block;
       position: fixed; left: 0; right: 0; bottom: 0;
       height: calc(env(safe-area-inset-bottom) + 80px);
       background-color: var(--card);
       pointer-events: none;
-      z-index: -1;
+      /* 保持在地圖之上、panel（z-index: 1100）之下，讓 Safari 能取到 fixed 背景。 */
+      z-index: 1099;
     }
 
     .panel[data-state="full"] .panel-actions {
