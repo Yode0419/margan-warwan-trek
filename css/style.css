@@ -198,6 +198,11 @@ h3 { margin: 0 0 4px; font-size: 15px; color: var(--brand-dark); }
   }
   .panel[data-state="minimized"] #day-tabs { padding-bottom: 0; }
 
+  /* 從 minimized 往上拖時，讓原本隱藏的內容隨面板高度逐步露出。 */
+  .panel[data-state="minimized"].sheet-peek .card-head,
+  .panel[data-state="minimized"].sheet-peek .panel-actions { display: flex; }
+  .panel[data-state="minimized"].sheet-peek .panel-scroll { display: block; }
+
   /* collapsed：只留把手 + 日期列 + 標題 + 底部按鈕，捲動區（行程細節/海拔）整塊隱藏 */
   .panel[data-state="collapsed"] .panel-scroll { display: none; }
   /* 拖曳過程（sheet-peek）暫時恢復顯示，讓內容隨拖曳浮現，避免高度判定跳動 */
