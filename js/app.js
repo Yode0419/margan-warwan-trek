@@ -433,8 +433,11 @@
     function setState(next, opts) {
       const silent = opts && opts.silent;
       const wasContentHidden = state === "minimized" || state === "collapsed";
+      dragging = false;
       state = next;
       panel.dataset.state = next;
+      panel.classList.remove("sheet-peek");
+      document.body.classList.remove("sheet-drag-locked");
       panel.classList.remove("dragging");
       panel.style.height = "";
       if (silent) lastPanelHeight = heightFor(next);
@@ -445,16 +448,21 @@
       }
     }
 
-    let dragStartY = 0, dragStartH = 0, dragging = false, dragMoved = false;
+    let dragStartY = 0, dragStartH = 0, dragMinH = 0, dragMaxH = 0;
+    let dragging = false, dragMoved = false;
 
     handle.addEventListener("pointerdown", (e) => {
       if (!isMobile()) return;
       dragging = true;
       dragMoved = false;
+      document.body.classList.add("sheet-drag-locked");
       handle.setPointerCapture(e.pointerId);
       panel.classList.add("dragging");
       dragStartY = e.clientY;
       dragStartH = panel.getBoundingClientRect().height;
+      // 拖曳開始後固定邊界，避免 Safari 工具列造成 dvh 變動時中途跳動。
+      dragMinH = heightFor("minimized");
+      dragMaxH = heightFor("full");
       // 拖曳過程需要 panel-scroll 內容可見，暫時取消 collapsed 的隱藏規則
       panel.classList.add("sheet-peek");
     });
@@ -464,15 +472,16 @@
       const deltaY = e.clientY - dragStartY;
       if (Math.abs(deltaY) > 4) dragMoved = true;
       let next = dragStartH - deltaY;
-      next = Math.max(heightFor("minimized"), Math.min(heightFor("full"), next));
+      next = Math.max(dragMinH, Math.min(dragMaxH, next));
       panel.style.height = next + "px";
     });
 
-    function endDrag(e) {
+    function endDrag() {
       if (!dragging) return;
+      const currentH = panel.getBoundingClientRect().height;
       dragging = false;
       panel.classList.remove("sheet-peek");
-      const currentH = dragStartH - (e.clientY - dragStartY);
+      document.body.classList.remove("sheet-drag-locked");
       const candidates = STATES.map(s => ({ s, h: heightFor(s) }));
       candidates.sort((a, b) => Math.abs(a.h - currentH) - Math.abs(b.h - currentH));
       setState(candidates[0].s);
@@ -480,6 +489,7 @@
     }
     handle.addEventListener("pointerup", endDrag);
     handle.addEventListener("pointercancel", endDrag);
+    handle.addEventListener("lostpointercapture", endDrag);
 
     handle.addEventListener("click", () => {
       if (dragging || dragMoved) return;
