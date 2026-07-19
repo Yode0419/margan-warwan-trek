@@ -162,7 +162,6 @@ h3 { margin: 0 0 4px; font-size: 15px; color: var(--brand-dark); }
 /* Mobile：bottom sheet（地圖滿版背景 + 可拖曳底部抽屜） */
 @media (max-width: 859px) {
   html, body {
-    height: 100%;
     overflow: hidden;
     overscroll-behavior: none;
   }
@@ -245,7 +244,7 @@ h3 { margin: 0 0 4px; font-size: 15px; color: var(--brand-dark); }
     .toolbar-tint-helper {
       display: block;
       position: fixed; left: 0; right: 0; bottom: 0;
-      height: calc(env(safe-area-inset-bottom) + 80px);
+      height: min(calc(env(safe-area-inset-bottom) + 80px), var(--sheet-minimized));
       background-color: var(--card);
       pointer-events: none;
       /* 保持在地圖之上、panel（z-index: 1100）之下，讓 Safari 能取到 fixed 背景。 */
