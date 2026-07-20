@@ -53,6 +53,14 @@
     return language === "en" ? DAY_EN[day.id] : day;
   }
 
+  const TRIP_START = new Date(2026, 6, 29); // D1 = 7/29
+  const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  function dayDateLabel(day) {
+    const date = new Date(TRIP_START);
+    date.setDate(date.getDate() + (day.id - 1));
+    return `${date.getMonth() + 1}/${date.getDate()} (${WEEKDAY_SHORT[date.getDay()]})`;
+  }
+
   function setControlLabel(control, label) {
     control.querySelector(".btn-label").textContent = label;
     control.setAttribute("aria-label", label);
@@ -242,6 +250,7 @@
     tabs.children[i].scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
 
     document.getElementById("day-title").textContent = dayCopy.title;
+    document.getElementById("day-date").textContent = dayDateLabel(d);
     document.getElementById("day-desc").textContent = dayCopy.desc;
 
     const ul = document.getElementById("day-stats");
