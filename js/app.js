@@ -14,10 +14,10 @@
       fitRoute: "縮放至路線",
       dayGpx: "下載本日 GPX",
       layers: ["街道圖", "地形圖", "衛星影像"],
-      lineModalTitle: "LINE 瀏覽器無法下載",
-      lineModalBody: "請改用瀏覽器開啟並下載；若沒反應，請透過 LINE 選單開啟外部瀏覽器再試一次。",
-      lineModalOpen: "用瀏覽器開啟",
-      lineModalClose: "取消"
+      inappModalTitle: (app) => `${app} 瀏覽器無法下載`,
+      inappModalBody: (app) => `請改用瀏覽器開啟並下載；若沒反應，請透過 ${app} 選單開啟外部瀏覽器再試一次。`,
+      inappModalOpen: "用瀏覽器開啟",
+      inappModalClose: "取消"
     },
     en: {
       pageTitle: "Margan & Warwan Valley Trek | Alternative Route",
@@ -30,10 +30,10 @@
       fitRoute: "Fit route",
       dayGpx: "Download day GPX",
       layers: ["Street map", "Topographic map", "Satellite imagery"],
-      lineModalTitle: "Can't download in LINE",
-      lineModalBody: "Open this in your browser to download it; if nothing happens, use LINE's menu to open it in an external browser and try again.",
-      lineModalOpen: "Open in browser",
-      lineModalClose: "Cancel"
+      inappModalTitle: (app) => `Can't download in ${app}`,
+      inappModalBody: (app) => `Open this in your browser to download it; if nothing happens, use ${app}'s menu to open it in an external browser and try again.`,
+      inappModalOpen: "Open in browser",
+      inappModalClose: "Cancel"
     }
   };
   const DAY_EN = {
@@ -103,8 +103,17 @@
     }
   });
 
-  // ---- LINE 內建瀏覽器下載提示 ----
-  const LINE_UA = /\bLine\//i.test(navigator.userAgent);
+  // ---- App 內建瀏覽器下載提示 ----
+  const IN_APP_BROWSERS = [
+    { name: "LINE", test: /\bLine\//i },
+    { name: "Instagram", test: /Instagram/i },
+    { name: "Threads", test: /Barcelona|Threads/i },
+    { name: "Messenger", test: /\bMessenger\b|FBAN\/(MessengerForiOS|Orca)/i },
+    { name: "Facebook", test: /FBAN|FBAV|FB_IAB|FBIOS/i },
+    { name: "WeChat", test: /MicroMessenger/i },
+    { name: "TikTok", test: /TikTok|musical_ly/i }
+  ];
+  const IN_APP_NAME = (IN_APP_BROWSERS.find(b => b.test.test(navigator.userAgent)) || {}).name || null;
   const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const IS_ANDROID = /Android/i.test(navigator.userAgent);
 
@@ -121,31 +130,31 @@
     }
   }
 
-  const lineModalOverlay = document.getElementById("line-modal-overlay");
-  const lineModalOpenBtn = document.getElementById("line-modal-open");
-  const lineModalCloseBtn = document.getElementById("line-modal-close");
+  const inappModalOverlay = document.getElementById("inapp-modal-overlay");
+  const inappModalOpenBtn = document.getElementById("inapp-modal-open");
+  const inappModalCloseBtn = document.getElementById("inapp-modal-close");
   let pendingDownloadUrl = null;
 
-  function showLineModal(url) {
+  function showInappModal(url) {
     pendingDownloadUrl = url;
-    lineModalOverlay.hidden = false;
+    inappModalOverlay.hidden = false;
   }
-  function hideLineModal() {
-    lineModalOverlay.hidden = true;
+  function hideInappModal() {
+    inappModalOverlay.hidden = true;
     pendingDownloadUrl = null;
   }
-  lineModalOpenBtn.addEventListener("click", () => {
+  inappModalOpenBtn.addEventListener("click", () => {
     if (pendingDownloadUrl) openExternalBrowser(pendingDownloadUrl);
   });
-  lineModalCloseBtn.addEventListener("click", hideLineModal);
-  lineModalOverlay.addEventListener("click", (e) => {
-    if (e.target === lineModalOverlay) hideLineModal();
+  inappModalCloseBtn.addEventListener("click", hideInappModal);
+  inappModalOverlay.addEventListener("click", (e) => {
+    if (e.target === inappModalOverlay) hideInappModal();
   });
 
   function interceptDownload(e) {
-    if (!LINE_UA) return;
+    if (!IN_APP_NAME) return;
     e.preventDefault();
-    showLineModal(e.currentTarget.href);
+    showInappModal(e.currentTarget.href);
   }
   document.querySelector(".btn-light").addEventListener("click", interceptDownload);
   document.getElementById("day-download").addEventListener("click", interceptDownload);
@@ -584,10 +593,11 @@
     setControlLabel(document.querySelector(".btn-light"), copy.fullGpx);
     setControlLabel(document.getElementById("fit-btn"), copy.fitRoute);
     setControlLabel(document.getElementById("day-download"), copy.dayGpx);
-    document.getElementById("line-modal-title").textContent = copy.lineModalTitle;
-    document.getElementById("line-modal-body").textContent = copy.lineModalBody;
-    lineModalOpenBtn.textContent = copy.lineModalOpen;
-    lineModalCloseBtn.textContent = copy.lineModalClose;
+    const inappName = IN_APP_NAME || (language === "en" ? "this app" : "此 App");
+    document.getElementById("inapp-modal-title").textContent = copy.inappModalTitle(inappName);
+    document.getElementById("inapp-modal-body").textContent = copy.inappModalBody(inappName);
+    inappModalOpenBtn.textContent = copy.inappModalOpen;
+    inappModalCloseBtn.textContent = copy.inappModalClose;
     [...tabs.children].forEach((tab, i) => { tab.textContent = localDay(DAYS[i]).short; });
     waypointMarkers.forEach(({ marker, waypoint, index }) => {
       marker.setPopupContent(`<b>${language === "en" ? WAYPOINT_EN[index] : waypoint.name}</b>`);
