@@ -83,6 +83,15 @@
 
 <div class="toolbar-tint-helper" aria-hidden="true"></div>
 
+<div class="modal-overlay" id="line-modal-overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="line-modal-title">
+    <h2 id="line-modal-title">LINE 瀏覽器無法下載</h2>
+    <p id="line-modal-body">請改用瀏覽器開啟並下載；若沒反應，請透過 LINE 選單開啟外部瀏覽器再試一次。</p>
+    <button class="btn" id="line-modal-open" type="button">用瀏覽器開啟</button>
+    <button class="btn btn-outline" id="line-modal-close" type="button">取消</button>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="js/data.js"></script>

@@ -13,7 +13,11 @@
       elevation: "高度變化",
       fitRoute: "縮放至路線",
       dayGpx: "下載本日 GPX",
-      layers: ["街道圖", "地形圖", "衛星影像"]
+      layers: ["街道圖", "地形圖", "衛星影像"],
+      lineModalTitle: "LINE 瀏覽器無法下載",
+      lineModalBody: "請改用瀏覽器開啟並下載；若沒反應，請透過 LINE 選單開啟外部瀏覽器再試一次。",
+      lineModalOpen: "用瀏覽器開啟",
+      lineModalClose: "取消"
     },
     en: {
       pageTitle: "Margan & Warwan Valley Trek | Alternative Route",
@@ -25,7 +29,11 @@
       elevation: "Elevation profile",
       fitRoute: "Fit route",
       dayGpx: "Download day GPX",
-      layers: ["Street map", "Topographic map", "Satellite imagery"]
+      layers: ["Street map", "Topographic map", "Satellite imagery"],
+      lineModalTitle: "Can't download in LINE",
+      lineModalBody: "Open this in your browser to download it; if nothing happens, use LINE's menu to open it in an external browser and try again.",
+      lineModalOpen: "Open in browser",
+      lineModalClose: "Cancel"
     }
   };
   const DAY_EN = {
@@ -94,6 +102,53 @@
       infoTooltip.hidden = true;
     }
   });
+
+  // ---- LINE 內建瀏覽器下載提示 ----
+  const LINE_UA = /\bLine\//i.test(navigator.userAgent);
+  const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const IS_ANDROID = /Android/i.test(navigator.userAgent);
+
+  function openExternalBrowser(url) {
+    if (IS_ANDROID) {
+      const noScheme = url.replace(/^https?:\/\//, "");
+      location.href = "intent://" + noScheme +
+        "#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=" +
+        encodeURIComponent(url) + ";end";
+    } else if (IS_IOS) {
+      location.href = url.replace(/^https:\/\//, "x-safari-https://");
+    } else {
+      location.href = url;
+    }
+  }
+
+  const lineModalOverlay = document.getElementById("line-modal-overlay");
+  const lineModalOpenBtn = document.getElementById("line-modal-open");
+  const lineModalCloseBtn = document.getElementById("line-modal-close");
+  let pendingDownloadUrl = null;
+
+  function showLineModal(url) {
+    pendingDownloadUrl = url;
+    lineModalOverlay.hidden = false;
+  }
+  function hideLineModal() {
+    lineModalOverlay.hidden = true;
+    pendingDownloadUrl = null;
+  }
+  lineModalOpenBtn.addEventListener("click", () => {
+    if (pendingDownloadUrl) openExternalBrowser(pendingDownloadUrl);
+  });
+  lineModalCloseBtn.addEventListener("click", hideLineModal);
+  lineModalOverlay.addEventListener("click", (e) => {
+    if (e.target === lineModalOverlay) hideLineModal();
+  });
+
+  function interceptDownload(e) {
+    if (!LINE_UA) return;
+    e.preventDefault();
+    showLineModal(e.currentTarget.href);
+  }
+  document.querySelector(".btn-light").addEventListener("click", interceptDownload);
+  document.getElementById("day-download").addEventListener("click", interceptDownload);
 
   // ---- 地圖 ----
   const map = L.map("map", { scrollWheelZoom: true });
@@ -529,6 +584,10 @@
     setControlLabel(document.querySelector(".btn-light"), copy.fullGpx);
     setControlLabel(document.getElementById("fit-btn"), copy.fitRoute);
     setControlLabel(document.getElementById("day-download"), copy.dayGpx);
+    document.getElementById("line-modal-title").textContent = copy.lineModalTitle;
+    document.getElementById("line-modal-body").textContent = copy.lineModalBody;
+    lineModalOpenBtn.textContent = copy.lineModalOpen;
+    lineModalCloseBtn.textContent = copy.lineModalClose;
     [...tabs.children].forEach((tab, i) => { tab.textContent = localDay(DAYS[i]).short; });
     waypointMarkers.forEach(({ marker, waypoint, index }) => {
       marker.setPopupContent(`<b>${language === "en" ? WAYPOINT_EN[index] : waypoint.name}</b>`);
